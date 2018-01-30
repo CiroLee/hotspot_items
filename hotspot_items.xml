@@ -1,0 +1,136 @@
+
+<krpano>
+	
+	<!--选择板热点式点-->
+	<style name="hs_circle_item" url="" scale="0.5" distorted="true" onover="tween(scale,0.55,0.3)" onout="tween(scale,0.5,0.3)" onclick="item_load_to_scene()" />
+
+	<!--动态热点样式-->
+	<style name="circle_blur_style" url="skin/circle_spot.png" distorted="true" onclick="toggle_hs_items()" />
+
+	<action name="create_hsitem" >
+		<!--动态热点，如果没有使用动态热点可以删除此函数-->
+		do_crop_animation(128,128,30);
+
+		set(itemnums,get(items));
+		set(start,%2);
+
+		if(start == null,
+			set(start,0),
+		);
+
+
+		for(set(i,0), i LT itemnums,inc(i),
+			txtadd(itemname,'child_',get(name),'_',get(i));
+			txtadd(itemurl,'%HTMLPATH%/skin/',%1,get(i),'.png');  <!--使用时注意路径-->
+
+			addhotspot(get(itemname));
+			hotspot[get(itemname)].loadstyle(hs_circle_item);
+			copy(hotspot[get(itemname)].ath,hotspot[get(name)].ath);
+			copy(hotspot[get(itemname)].atv,hotspot[get(name)].atv);
+			set(hotspot[get(itemname)],
+				url=get(itemurl),
+				oy=36,
+				edge='bottom',
+				itemindex:number=calc(start+i),
+				visible=false,
+				alpha=0
+			);
+
+			if(
+				itemnums GT 2,set(hotspot[get(itemname)].rotate,calc((i-1)*60)),
+				itemnums ==2,set(hotspot[get(itemname)].rotate,calc((i-1)*60+30)),
+				itemnums ==1,set(hotspot[get(itemname)].rotate,0)
+			);
+			
+		 );
+	</action>
+
+	<!--选择板热点弹出/隐藏函数-->
+	<action name="toggle_hs_items" >
+		set(itemsnums2,get(items));
+
+		looktohotspot(get(name),get(view.fov));
+		tween(oy,10,0.2,default,tween(oy,0,0.2,easeOutQuad));
+		wait();
+
+		for(set(j,0),j LT items,inc(j),
+			txtadd(elementname,'child_',get(name),'_',get(j));
+			if(hotspot[get(elementname)].visible,
+				tween(hotspot[get(elementname)].oy,36,0.3,easeOutQuad);
+				tween(hotspot[get(elementname)].alpha,0,0.28);
+				,
+
+				set(hotspot[get(elementname)].visible,true);
+				tween(hotspot[get(elementname)].oy,-80,0.3,easeOutQuad);
+				tween(hotspot[get(elementname)].alpha,1,0.28);
+			);
+			
+		);
+		delayedcall(0.4,hide_item_visible(get(itemsnums2)));
+	</action>
+
+	<!--选择板热点隐藏,为了动画效果，需要额外调用此函数-->
+	<action name="hide_item_visible" >
+		for(set(k,0),k LT %1,inc(k),
+			txtadd(elementname2,'child_',get(name),'_',get(k));
+			if(!hotspot[get(elementname2)].alpha,
+				set(hotspot[get(elementname2)].visible,false)
+			);
+			
+		);
+	</action>
+
+	<!--demo:选择板热点击事件,适合统一事件，如点击按索引顺序加载场景，如有特别设置，需要根据索引值，分别设置-->
+	<action name="item_load_to_scene" >
+		trace(itemindex);
+		<!--根据索引值设置功能-->
+		if(itemindex LT 3,
+			loadscene(get(itemindex),null,KEEPVIEW|KEEPMOVING,BLEND(0.5));
+		);
+
+		if(itemindex GT 2 AND itemindex LT 5,
+			set(layer[showlayer],
+				visible=true,
+				url=get(url)
+			);
+			tween(layer[showlayer].alpha,1);
+		);
+
+		if(itemindex == 5,
+			loadscene(0,null,KEEPVIEW|KEEPMOVING,BLEND(0.5));
+		);
+
+		
+	</action>
+
+
+	<!--动态热点action-->
+	<action name="do_crop_animation">
+	<!-- 为热点注册属性 -->
+	registerattribute(xframes, calc((imagewidth / %1) BOR 0));
+	registerattribute(yframes, calc((imageheight / %2) BOR 0));
+	registerattribute(frames, calc(xframes * yframes));
+	registerattribute(frame, 0);
+ 
+	set(crop, '0|0|%1|%2');
+ 
+	setinterval(calc('crop_anim_' + name), calc(1.0 / %3),
+		if(loaded,
+			inc(frame);
+			if(frame GE frames, if(onlastframe !== null, onlastframe() ); set(frame,0); );
+			mod(xpos, frame, xframes);
+			div(ypos, frame, xframes);
+			Math.floor(ypos);
+			mul(xpos, %1);
+			mul(ypos, %2);
+			calc(crop, xpos + '|' + ypos + '|%1|%2');
+		  ,
+			clearinterval(calc('crop_anim_' + name));
+		  );
+	  );
+	</action>
+
+	<!--额外显示，配合子热点的点击事件，可删除-->
+	<layer name="showlayer" url="" keep="true" align="center" scale="1" visible="false" alpha="0" onclick="tween(alpha,0);delayedcall(0.5,set(visible,false))" />
+
+</krpano>
